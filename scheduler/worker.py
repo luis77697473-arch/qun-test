@@ -91,6 +91,7 @@ class Worker:
         self._thread: Optional[threading.Thread] = None
         self._tasks_processed = 0
         self._total_latency = 0.0
+        self._pending_count = 0
         self._lock = threading.Lock()
 
         # Resource registry — injected by the Dispatcher
@@ -121,6 +122,8 @@ class Worker:
         try:
             # PriorityQueue sorts by first element; negate priority for max-first
             self.task_queue.put_nowait((-task.priority, task.task_id, task))
+            with self._lock:
+                self._pending_count += 1
             return True
         except queue.Full:
             return False
@@ -139,6 +142,7 @@ class Worker:
             with self._lock:
                 self._tasks_processed += 1
                 self._total_latency += result.latency
+                self._pending_count -= 1
             if self.on_result:
                 self.on_result(result)
 
@@ -198,7 +202,8 @@ class Worker:
 
     @property
     def pending_tasks(self) -> int:
-        return self.task_queue.qsize()
+        with self._lock:
+            return self._pending_count
 
     @property
     def avg_latency(self) -> float:

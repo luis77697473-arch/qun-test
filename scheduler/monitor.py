@@ -135,25 +135,24 @@ class WorkerMetrics:
         with self._lock:
             return self._compute_wma_unlocked()
 
-    def volatility(self) -> float:
-        """ΔT = σ(L) / (μ(L) + ε)"""
-        with self._lock:
-            if len(self._latencies) < 2:
-                return 0.0
-            lats = list(self._latencies)
+    def _volatility_unlocked(self) -> float:
+        """ΔT = σ(L) / (μ(L) + ε)  — must be called with self._lock held."""
+        if len(self._latencies) < 2:
+            return 0.0
+        lats = list(self._latencies)
         mean = sum(lats) / len(lats)
         var = sum((x - mean) ** 2 for x in lats) / len(lats)
         std = math.sqrt(var)
         return std / (mean + 1e-9)
 
-    def trend_slope(self) -> float:
-        """
-        Least-squares slope β over the WMA history.
-        β > 0  ⟹  latency increasing (worker degrading)
-        β < 0  ⟹  latency decreasing (worker improving)
-        """
+    def volatility(self) -> float:
+        """ΔT = σ(L) / (μ(L) + ε)"""
         with self._lock:
-            history = list(self._wma_history)
+            return self._volatility_unlocked()
+
+    def _trend_slope_unlocked(self) -> float:
+        """Least-squares slope β — must be called with self._lock held."""
+        history = list(self._wma_history)
         n = len(history)
         if n < 3:
             return 0.0
@@ -165,6 +164,23 @@ class WorkerMetrics:
         if denom == 0:
             return 0.0
         return (n * sum_ky - sum_k * sum_y) / denom
+
+    def trend_slope(self) -> float:
+        """
+        Least-squares slope β over the WMA history.
+        β > 0  ⟹  latency increasing (worker degrading)
+        β < 0  ⟹  latency decreasing (worker improving)
+        """
+        with self._lock:
+            return self._trend_slope_unlocked()
+
+    def snapshot(self) -> tuple[float, float, float]:
+        """Return (wma_latency, volatility, trend_slope) under a single lock acquisition."""
+        with self._lock:
+            wma = self._compute_wma_unlocked()
+            vol = self._volatility_unlocked()
+            trend = self._trend_slope_unlocked()
+        return wma, vol, trend
 
 
 class Monitor:
@@ -245,9 +261,8 @@ class Monitor:
 
         for wid in worker_ids:
             m = metrics_map[wid]
-            t_avg = m.wma_latency() or eps
-            delta_t = m.volatility()
-            beta = m.trend_slope()
+            t_avg, delta_t, beta = m.snapshot()
+            t_avg = t_avg or eps
 
             # S_i = α / T_avg + (1-α) / (ΔT + ε)
             score = self.alpha / (t_avg + eps) + (1 - self.alpha) / (delta_t + eps)

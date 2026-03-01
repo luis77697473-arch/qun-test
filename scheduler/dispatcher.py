@@ -199,7 +199,8 @@ class Dispatcher:
                         daemon=True,
                     ).start()
 
-        self._total_dispatched += 1
+        with self._results_lock:
+            self._total_dispatched += 1
         return chosen_id
 
     def dispatch_batch(self, tasks: list[Task]) -> dict[str, int]:
@@ -216,7 +217,8 @@ class Dispatcher:
 
     @property
     def total_dispatched(self) -> int:
-        return self._total_dispatched
+        with self._results_lock:
+            return self._total_dispatched
 
     @property
     def total_succeeded(self) -> int:
