@@ -1,0 +1,20 @@
+[Unit]
+Description=OpenClaw Telegram Bridge Service
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/openclaw-telegram-bridge
+ExecStart=/usr/bin/node src/bot.js
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=openclaw-tg-bridge
+NoNewPrivileges=true
+ProtectSystem=full
+EnvironmentFile=/home/ubuntu/openclaw-telegram-bridge/.env
+
+[Install]
+WantedBy=multi-user.target
