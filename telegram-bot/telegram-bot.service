@@ -1,0 +1,25 @@
+[Unit]
+Description=Telegram Bot Service
+Documentation=https://github.com/your-username/telegram-bot
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/telegram-bot
+ExecStart=/usr/bin/node src/bot.js
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=telegram-bot
+
+# 安全加固
+NoNewPrivileges=true
+ProtectSystem=full
+
+# 环境变量从 .env 文件加载
+EnvironmentFile=/home/ubuntu/telegram-bot/.env
+
+[Install]
+WantedBy=multi-user.target
