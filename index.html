@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>万历与张居正 · 十年新政与身后清算</title>
+<!-- 引入中文衬线字体，营造古籍质感 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600;700;900&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+<style>
+  /* ========== 全局重置与基础变量 ========== */
+  :root {
+    --ink-bg: #1a1410;           /* 深墨底色 */
+    --paper: #2a1f17;            /* 仿古宣纸色 */
+    --paper-light: #3a2d22;      /* 卡片纸面 */
+    --gold: #c9a55a;             /* 暗金强调 */
+    --gold-deep: #8a6d34;        /* 沉金边框 */
+    --vermilion: #a83232;        /* 朱砂红 */
+    --vermilion-deep: #6b1f1f;   /* 印章深红 */
+    --text-main: #e8dcc4;        /* 主文字 米黄 */
+    --text-dim: #9a8e74;         /* 次级文字 */
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    /* 隐藏滚动条但保留滚动功能（通过 JS 模拟）*/
+    overflow: hidden;
+    background: var(--ink-bg);
+    font-family: 'Noto Serif SC', 'SimSun', '宋体', serif;
+    color: var(--text-main);
+    width: 100%;
+    height: 100vh;
+    user-select: none;
+  }
+
+  /* ========== 宣纸纹理背景层 ========== */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      /* 模拟纸张老化的斑驳 */
+      radial-gradient(ellipse at 20% 30%, rgba(139, 90, 43, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 70%, rgba(168, 50, 50, 0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 50% 50%, rgba(201, 165, 90, 0.04) 0%, transparent 70%),
+      linear-gradient(135deg, var(--ink-bg) 0%, #221913 50%, var(--ink-bg) 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* 细微的纸张纹理（CSS 噪点）*/
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(201, 165, 90, 0.015) 2px, rgba(201, 165, 90, 0.015) 3px),
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.05) 2px, rgba(0, 0, 0, 0.05) 3px);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ========== 顶部标题栏（固定）========== */
+  .header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 24px 48px;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+  }
+
+  .header-title {
+    font-family: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+    font-size: 28px;
+    color: var(--gold);
+    letter-spacing: 4px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  }
+
+  .header-subtitle {
+    font-size: 13px;
+    color: var(--text-dim);
+    letter-spacing: 6px;
+    writing-mode: horizontal-tb;
+  }
+
+  /* ========== 横向卷轴容器 ========== */
+  .scroll-container {
+    /* 关键：使用 fixed + transform 实现横向滚动 */
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: 0 8vw;
+    will-change: transform;
+    z-index: 10;
+  }
+
+  /* ========== 卷轴起始装饰 ========== */
+  .scroll-start, .scroll-end {
+    flex-shrink: 0;
+    width: 60vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 0 6vw;
+    position: relative;
+  }
+
+  .scroll-start .title-main {
+    font-family: 'Ma Shan Zheng', serif;
+    font-size: clamp(80px, 12vw, 160px);
+    color: var(--gold);
+    line-height: 1;
+    margin-bottom: 32px;
+    text-shadow:
+      0 4px 20px rgba(0,0,0,0.8),
+      0 0 60px rgba(201, 165, 90, 0.2);
+    /* 竖排标题感 */
+    writing-mode: vertical-rl;
+    letter-spacing: 20px;
+  }
+
+  .scroll-start .title-sub {
+    font-size: 18px;
+    color: var(--text-dim);
+    letter-spacing: 8px;
+    writing-mode: vertical-rl;
+    margin-left: 24px;
+  }
+
+  .scroll-start .seal {
+    position: absolute;
+    bottom: 80px;
+    right: 8vw;
+    width: 90px;
+    height: 90px;
+  }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--gold-deep);
+    font-size: 12px;
+    letter-spacing: 4px;
+    animation: hintPulse 2s ease-in-out infinite;
+  }
+
+  .scroll-hint::after {
+    content: '→';
+    margin-left: 8px;
+    font-size: 16px;
+  }
+
+  @keyframes hintPulse {
+    0%, 100% { opacity: 0.4; transform: translateX(calc(-50% - 6px)); }
+    50%      { opacity: 1;   transform: translateX(calc(-50% + 6px)); }
+  }
+
+  /* ========== 时间轴主线（横贯整个卷轴）========== */
+  .timeline-track {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    transform: translateY(50%);
+    background: linear-gradient(90deg,
+      transparent 0%,
+      var(--gold-deep) 5%,
+      var(--gold) 50%,
+      var(--gold-deep) 95%,
+      transparent 100%);
+    box-shadow: 0 0 8px rgba(201, 165, 90, 0.3);
+    z-index: 5;
+  }
+
+  /* ========== 历史卡片 ========== */
+  .card {
+    flex-shrink: 0;
+    width: 480px;
+    height: 70vh;
+    margin: 0 60px;
+    background: linear-gradient(180deg, var(--paper-light) 0%, var(--paper) 100%);
+    border: 1px solid var(--gold-deep);
+    position: relative;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    box-shadow:
+      0 20px 60px rgba(0, 0, 0, 0.6),
+      0 0 0 1px rgba(201, 165, 90, 0.1) inset,
+      0 0 40px rgba(0, 0, 0, 0.3) inset;
+    /* 入场动画初始态 */
+    opacity: 0.3;
+    transform: translateY(40px) scale(0.96);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .card.in-view {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  /* 卡片四角的装饰角线 */
+  .card::before, .card::after {
+    content: '';
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-color: var(--gold);
+    border-style: solid;
+  }
+  .card::before {
+    top: 8px; left: 8px;
+    border-width: 1px 0 0 1px;
+  }
+  .card::after {
+    bottom: 8px; right: 8px;
+    border-width: 0 1px 1px 0;
+  }
+
+  .card-corner-tr, .card-corner-bl {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-color: var(--gold);
+    border-style: solid;
+  }
+  .card-corner-tr {
+    top: 8px; right: 8px;
+    border-width: 1px 1px 0 0;
+  }
+  .card-corner-bl {
+    bottom: 8px; left: 8px;
+    border-width: 0 0 1px 1px;
+  }
+
+  /* 卡片配图 */
+  .card-image {
+    width: 100%;
+    height: 220px;
+    background: linear-gradient(135deg, #3a2d22, #2a1f17);
+    border: 1px solid var(--gold-deep);
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+    /* 单色滤镜营造水墨感 */
+    filter: sepia(0.4) contrast(1.1) brightness(0.85);
+  }
+
+  .card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* 配图上的暗角 */
+  .card-image::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(26, 20, 16, 0.5) 100%);
+    pointer-events: none;
+  }
+
+  /* 卡片年份（大字） */
+  .card-year {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 14px;
+    color: var(--vermilion);
+    letter-spacing: 6px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .card-year::before {
+    content: '';
+    width: 24px;
+    height: 1px;
+    background: var(--vermilion);
+  }
+
+  .card-title {
+    font-family: 'Noto Serif SC', serif;
+    font-weight: 700;
+    font-size: 26px;
+    color: var(--gold);
+    margin-bottom: 16px;
+    letter-spacing: 3px;
+    line-height: 1.4;
+  }
+
+  .card-divider {
+    width: 60px;
+    height: 1px;
+    background: var(--gold-deep);
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .card-divider::after {
+    content: '◆';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--gold);
+    font-size: 8px;
+    background: var(--paper);
+    padding: 0 6px;
+  }
+
+  .card-content {
+    font-size: 14px;
+    line-height: 1.9;
+    color: var(--text-main);
+    letter-spacing: 1px;
+    text-indent: 2em;
+    flex-grow: 1;
+  }
+
+  /* 卡片底部的章节号 */
+  .card-number {
+    position: absolute;
+    bottom: -16px;
+    right: 24px;
+    background: var(--ink-bg);
+    color: var(--gold);
+    padding: 2px 12px;
+    font-size: 12px;
+    letter-spacing: 4px;
+    border: 1px solid var(--gold-deep);
+  }
+
+  /* 时间轴节点（卡片上方的圆点）*/
+  .card-node {
+    position: absolute;
+    top: -40vh;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 20px;
+    background: var(--ink-bg);
+    border: 2px solid var(--gold);
+    border-radius: 50%;
+    z-index: 6;
+    box-shadow: 0 0 12px rgba(201, 165, 90, 0.6);
+  }
+
+  .card-node::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    background: var(--gold);
+    border-radius: 50%;
+    transition: background 0.3s;
+  }
+
+  .card.in-view .card-node::before {
+    background: var(--vermilion);
+    box-shadow: 0 0 8px var(--vermilion);
+  }
+
+  /* 节点到卡片的连接线 */
+  .card-node::after {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1px;
+    height: 16vh;
+    background: linear-gradient(180deg, var(--gold) 0%, transparent 100%);
+  }
+
+  /* ========== 朱砂印章（SVG）========== */
+  .seal {
+    width: 60px;
+    height: 60px;
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    opacity: 0.9;
+    transform: rotate(-8deg);
+  }
+
+  /* ========== 卷轴结尾页 ========== */
+  .scroll-end {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .scroll-end .end-title {
+    font-family: 'Ma Shan Zheng', serif;
+    font-size: 64px;
+    color: var(--gold);
+    margin-bottom: 24px;
+    letter-spacing: 12px;
+  }
+
+  .scroll-end .end-quote {
+    font-size: 18px;
+    color: var(--text-dim);
+    line-height: 2.4;
+    letter-spacing: 4px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .scroll-end .end-attribution {
+    margin-top: 40px;
+    font-size: 14px;
+    color: var(--gold-deep);
+    letter-spacing: 8px;
+  }
+
+  /* ========== 底部进度指示器 ========== */
+  .progress-bar {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 240px;
+    height: 1px;
+    background: var(--gold-deep);
+    z-index: 100;
+  }
+  .progress-bar::before {
+    content: '';
+    position: absolute;
+    left: 0; top: -1px;
+    height: 3px;
+    background: var(--gold);
+    box-shadow: 0 0 8px var(--gold);
+    width: var(--progress, 0%);
+    transition: width 0.1s linear;
+  }
+  .progress-label {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 6px;
+  }
+
+  /* 章节序号样式（卡片上方）*/
+  .card-chapter {
+    position: absolute;
+    top: -28vh;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--gold-deep);
+    font-size: 12px;
+    letter-spacing: 4px;
+    font-family: 'Ma Shan Zheng', serif;
+  }
+</style>
+</head>
+<body>
+
+<!-- 顶部固定标题 -->
+<div class="header">
+  <div class="header-title">万历与张居正</div>
+  <div class="header-subtitle">十年新政 · 身后清算</div>
+</div>
+
+<!-- 横向滚动容器 -->
+<div class="scroll-container" id="scrollContainer">
+
+  <!-- 起始页：卷轴标题 -->
+  <section class="scroll-start">
+    <div class="title-main">江陵<br>风云</div>
+    <div class="title-sub">明 万历朝 史略</div>
+    <!-- 朱砂印章 -->
+    <svg class="seal" viewBox="0 0 100 100">
+      <rect x="5" y="5" width="90" height="90" fill="none" stroke="#a83232" stroke-width="3"/>
+      <rect x="10" y="10" width="80" height="80" fill="#a83232"/>
+      <text x="50" y="42" text-anchor="middle" fill="#f5e6c8" font-family="serif" font-size="22" font-weight="bold">江陵</text>
+      <text x="50" y="72" text-anchor="middle" fill="#f5e6c8" font-family="serif" font-size="22" font-weight="bold">史鉴</text>
+    </svg>
+    <div class="scroll-hint">滚动以展开画卷</div>
+  </section>
+
+  <!-- 横贯时间轴 -->
+  <div class="timeline-track"></div>
+
+  <!-- ========== 卡片 1：万历初政 ========== -->
+  <article class="card" data-index="0">
+    <span class="card-corner-tr"></span>
+    <span class="card-corner-bl"></span>
+    <div class="card-chapter">其 一</div>
+    <div class="card-node"></div>
+
+    <!-- 印章 -->
+    <svg class="seal" viewBox="0 0 60 60">
+      <rect x="2" y="2" width="56" height="56" fill="#a83232" rx="2"/>
+      <text x="30" y="38" text-anchor="middle" fill="#f5e6c8" font-family="serif" font-size="20" font-weight="bold">初政</text>
+    </svg>
+
+    <div class="card-image">
+      <img src="https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=600&q=80" alt="紫禁城" onerror="this.style.display='none'">
+    </div>
+    <div class="card-year">公元 一五七二年 · 隆庆六年</div>
+    <h2 class="card-title">幼主登基<br>首辅辅政</h2>
+    <div class="card-divider"></div>
+    <p class="card-content">十岁的明神宗朱翊钧继位，年号万历。张居正联合李太后与司礼监冯保，挤走高拱，成为内阁首辅。在李太后与冯保的支持下，他开启了长达十年的万历新政。彼时，少年天子视首辅如严父，太后呼其名而不名，朝野共称"江陵相公"。</p>
+
+    <div class="card-number">壹</div>
+  </article>
+
+  <!-- ========== 卡片 2：张居正改革 ========== -->
+  <article class="card" data-index="1">
+    <span class="card-corner-tr"></span>
+    <span class="card-corner-bl"></span>
+    <div class="card-chapter">其 二</div>
+    <div class="card-node"></div>
+
+    <svg class="seal" viewBox="0 0 60 60">
+      <rect x="2" y="2" width="56" height="56" fill="#a83232" rx="2"/>
+      <text x="30" y="38" text-anchor="middle" fill="#f5e6c8" font-family="serif" font-size="20" font-weight="bold">新政</text>
+    </svg>
+
+    <div class="card-image">
+      <img src="https://images.unsplash.com/photo-1599540090789-9c5ca8d4ddef?w=600&q=80" alt="古卷" onerror="this.style.display='none'">
+    </div>
+    <div class="card-year">公元 一五七三年 · 万历元年</div>
+    <h2 class="card-title">考成新法<br>整肃吏治</h2>
+    <div class="card-divider"></div>
+    <p class="card-content">张居正颁行《考成法》，以六部、都察院考核司、府、州、县，再以六科考核六部。事必登簿，月有所稽，岁有所考。一时间，"虽万里外，朝下而夕奉行"，沉疴已久的官僚机器骤然紧绷。然其法严苛，亦埋下日后清议之祸根。</p>
+
+    <div class="card-number">贰</div>
+  </article>
+
+  <!-- ========== 卡片 3：一条鞭法 ========== -->
+  <article class="card" data-index="2">
+    <span class="card-corner-tr"></span>
+    <span class="card-corner-bl"></span>
+    <div class="card-chapter">其 三</div>
+    <div class="card-node"></div>
+
+    <svg class="seal" viewBox="0 0 60 60">
+      <rect x="2" y="2" width="56" height="56" fill="#a83232" rx="2"/>
+      <text x="30" y="38" text-anchor="middle" fill="#f5e6c8" font-family="serif" font-size="20" font-weight="bold">鞭法</text>
+    </svg>
+
+    <div class="card-image">
+      <img src="https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=600&q=80" alt="账簿" onerror="this.style.display='none'">
+    </div>
+    <div class="card-year">公元 一五八一年 · 万历九年</div>
+    <h2 class="card-title">清丈天下<br>一条鞭法</h2>
+    <div class="card-divider"></div>
+    <p class="card-content">清丈田亩历时三年，多得田三百余万顷。继而推行"一条鞭法"，将田赋、徭役及杂税合并征银。赋役合一，化繁为简，国库渐充，太仓积粟可支十年。然触及豪强田产，朝中怨望渐生，已埋下身后翻案之伏笔。</p>
+
+    <div class="card-number">叁</div>
+  </article>
+
+  <!-- ========== 卡片 4：张居正病逝 ========== -->
+  <article class="card" data-index="3">
+    <span class="card-corner-tr"></span>
+    <span class="card-corner-bl"></span>
+    <div class="card-chapter">其 四</div>
+    <div class="card-node"></div>
+
+    <svg class="seal" viewBox="0 0 60 60">
+      <rect x="2" y="2" width="56" height="56" fill="#a83232" rx="2"/>
+      <text x="30" y="38" text-anchor="middle" fill="#f5e6c8" font-family="serif" font-size="20" font-weight="bold">薨逝</text>
+    </svg>
+
+    <div class="card-image">
+      <img src="https://images.unsplash.com/photo-1606293459209-cea3acc6f5e0?w=600&q=80" alt="残烛" onerror="this.style.display='none'">
+    </div>
+    <div class="card-year">公元 一五八二年 · 万历十年</div>
+    <h2 class="card-title">江陵薨逝<br>追赠太师</h2>
+    <div class="card-divider"></div>
+    <p class="card-content">六月二十日，张居正积劳成疾，卒于任上，年五十八。神宗辍朝数日，赠上柱国，谥"文忠"，赏银千两，蟒衣一袭。然圣眷之厚下，旧怨已悄然苏醒——那个被压抑了十年的少年天子，终于成了真正的皇帝。山雨欲来。</p>
+
+    <div class="card-number">肆</div>
+  </article>
+
+  <!-- ========== 卡片 5：万历清算 ========== -->
+  <article class="card" data-index="4">
+    <span class="card-corner-tr"></span>
+    <span class="card-corner-bl"></span>
+    <div class="card-chapter">其 五</div>
+    <div class="card-node"></div>
+
+    <svg class="seal" viewBox="0 0 60 60">
+      <rect x="2" y="2" width="56" height="56" fill="#a83232" rx="2"/>
+      <text x="30" y="38" text-anchor="middle" fill="#f5e6c8" font-family="serif" font-size="20" font-weight="bold">清算</text>
+    </svg>
+
+    <div class="card-image">
+      <img src="https://images.unsplash.com/photo-1505820013142-f86a3439c5b2?w=600&q=80" alt="风云" onerror="this.style.display='none'">
+    </div>
+    <div class="card-year">公元 一五八四年 · 万历十二年</div>
+    <h2 class="card-title">抄家削谥<br>身后清算</h2>
+    <div class="card-divider"></div>
+    <p class="card-content">居正死后未及两年，神宗下诏抄家。籍其家，得黄金万两、白银十余万两。长子敬修不堪拷讯自缢，家属饿死十余人。诏夺上柱国、太师，再夺谥号"文忠"，子孙削籍为民。十年师相之情，至此一笔勾销，新政废弛大半。</p>
+
+    <div class="card-number">伍</div>
+  </article>
+
+  <!-- ========== 卡片 6：万历怠政与遗响 ========== -->
+  <article class="card" data-index="5">
+    <span class="card-corner-tr"></span>
+    <span class="card-corner-bl"></span>
+    <div class="card-chapter">其 六</div>
+    <div class="card-node"></div>
+
+    <svg class="seal" viewBox="0 0 60 60">
+      <rect x="2" y="2" width="56" height="56" fill="#a83232" rx="2"/>
+      <text x="30" y="38" text-anchor="middle" fill="#f5e6c8" font-family="serif" font-size="20" font-weight="bold">遗响</text>
+    </svg>
+
+    <div class="card-image">
+      <img src="https://images.unsplash.com/photo-1518684079-3c830dcef090?w=600&q=80" alt="黄昏" onerror="this.style.display='none'">
+    </div>
+    <div class="card-year">公元 一六二二年 · 天启二年</div>
+    <h2 class="card-title">迟到的平反<br>遗响于明</h2>
+    <div class="card-divider"></div>
+    <p class="card-content">万历此后长居深宫，二十余年不视朝，国本之争、矿监税使，国势日颓。直至天启二年，熹宗诏复张居正官秩，崇祯朝再复其谥。然新政已成绝响，江陵之死竟成大明国运之转折。论者叹曰："明之亡，实亡于神宗"，而神宗之失，肇于江陵故矣。</p>
+
+    <div class="card-number">陆</div>
+  </article>
+
+  <!-- 结尾页：史评 -->
+  <section class="scroll-end">
+    <div class="end-title">史 评</div>
+    <p class="end-quote">
+      "居正之功，在万历初年；<br>
+      居正之过，在身后清算。<br>
+      非居正负神宗，神宗负居正也。"
+    </p>
+    <div class="end-attribution">—— 后世史家</div>
+  </section>
+
+</div>
+
+<!-- 底部进度条 -->
+<div class="progress-bar">
+  <div class="progress-label">画 卷 进 度</div>
+</div>
+
+<script>
+/* ============================================================
+   横向滚动核心逻辑
+   思路：
+   1. body 设为 overflow:hidden，禁用原生垂直滚动
+   2. 监听 wheel 事件，将 deltaY 累加到 targetX
+   3. 用 requestAnimationFrame + 线性插值（lerp）实现惯性平滑
+   4. 通过 transform: translateX 移动整个 .scroll-container
+   5. 兼容触摸滑动与键盘箭头键
+   ============================================================ */
+
+(function() {
+  const container = document.getElementById('scrollContainer');
+  const cards = document.querySelectorAll('.card');
+  const progressBar = document.querySelector('.progress-bar');
+
+  // 滚动状态变量
+  let targetX = 0;          // 目标位置（鼠标滚动累加的值）
+  let currentX = 0;         // 当前实际渲染位置
+  let maxScroll = 0;        // 最大可滚动距离
+  const lerpFactor = 0.08;  // 缓动系数（越小越丝滑，越大越跟手）
+  const scrollSpeed = 1.2;  // 滚轮灵敏度系数
+
+  /**
+   * 计算最大滚动距离
+   * 容器实际宽度 - 视口宽度 = 可滚动距离
+   */
+  function calcMaxScroll() {
+    maxScroll = container.scrollWidth - window.innerWidth;
+  }
+
+  /**
+   * 限制目标位置在合法范围内
+   */
+  function clamp(val, min, max) {
+    return Math.max(min, Math.min(max, val));
+  }
+
+  /**
+   * 主动画循环：每帧用 lerp 将 currentX 缓慢逼近 targetX
+   */
+  function animate() {
+    // 线性插值：current += (target - current) * factor
+    currentX += (targetX - currentX) * lerpFactor;
+
+    // 阈值优化：差距过小直接对齐，避免无限抖动
+    if (Math.abs(targetX - currentX) < 0.1) {
+      currentX = targetX;
+    }
+
+    // 应用 transform
+    container.style.transform = `translate3d(${-currentX}px, 0, 0)`;
+
+    // 更新进度条
+    const progress = maxScroll > 0 ? (currentX / maxScroll) * 100 : 0;
+    progressBar.style.setProperty('--progress', `${progress}%`);
+
+    // 检测卡片是否进入视口（用于触发入场动画）
+    checkCardsInView();
+
+    requestAnimationFrame(animate);
+  }
+
+  /**
+   * 检测哪些卡片当前在视口内
+   * 进入视口的卡片添加 .in-view 类触发动画
+   */
+  function checkCardsInView() {
+    const viewportLeft = currentX;
+    const viewportRight = currentX + window.innerWidth;
+
+    cards.forEach(card => {
+      // getBoundingClientRect 在 transform 后会返回视口相对位置
+      const rect = card.getBoundingClientRect();
+      // 判断卡片是否在屏幕内（留出一些预进入区域）
+      const inView = rect.left < window.innerWidth * 1.1 && rect.right > -window.innerWidth * 0.1;
+
+      if (inView) {
+        card.classList.add('in-view');
+      }
+    });
+  }
+
+  /**
+   * 监听鼠标滚轮事件
+   * 拦截默认垂直滚动，转换为横向 targetX 累加
+   */
+  function handleWheel(e) {
+    e.preventDefault();
+
+    // 优先使用 deltaY（垂直滚轮），其次 deltaX（横向滚轮 / 触控板）
+    const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+
+    targetX += delta * scrollSpeed;
+    targetX = clamp(targetX, 0, maxScroll);
+  }
+
+  /**
+   * 触摸支持（移动设备）
+   */
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchStartTargetX = 0;
+
+  function handleTouchStart(e) {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchStartTargetX = targetX;
+  }
+
+  function handleTouchMove(e) {
+    const deltaX = touchStartX - e.touches[0].clientX;
+    const deltaY = touchStartY - e.touches[0].clientY;
+    // 取主导方向，横竖滑动都转为横向滚动
+    const delta = Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY;
+    targetX = clamp(touchStartTargetX + delta * 1.5, 0, maxScroll);
+    e.preventDefault();
+  }
+
+  /**
+   * 键盘支持：左右箭头键滚动
+   */
+  function handleKeyDown(e) {
+    const step = window.innerWidth * 0.6;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+      targetX = clamp(targetX + step, 0, maxScroll);
+      e.preventDefault();
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
+      targetX = clamp(targetX - step, 0, maxScroll);
+      e.preventDefault();
+    } else if (e.key === 'Home') {
+      targetX = 0;
+    } else if (e.key === 'End') {
+      targetX = maxScroll;
+    }
+  }
+
+  /**
+   * 窗口尺寸变化时重算最大滚动距离
+   */
+  function handleResize() {
+    calcMaxScroll();
+    targetX = clamp(targetX, 0, maxScroll);
+  }
+
+  // ===== 初始化 =====
+  window.addEventListener('load', () => {
+    calcMaxScroll();
+    // 初始触发一次卡片可见性检测
+    checkCardsInView();
+  });
+
+  window.addEventListener('wheel', handleWheel, { passive: false });
+  window.addEventListener('touchstart', handleTouchStart, { passive: true });
+  window.addEventListener('touchmove', handleTouchMove, { passive: false });
+  window.addEventListener('keydown', handleKeyDown);
+  window.addEventListener('resize', handleResize);
+
+  // 立即先算一次（图片未加载完也能得到大致宽度）
+  calcMaxScroll();
+
+  // 启动动画循环
+  requestAnimationFrame(animate);
+})();
+</script>
+</body>
+</html>
