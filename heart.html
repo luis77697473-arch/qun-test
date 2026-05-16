@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<!--
+  =====================================================================
+  粉色爱心 · 手势互动页面 (heart.html)
+  ---------------------------------------------------------------------
+  使用方法：
+    1. 直接双击此文件，用浏览器打开即可（电脑 / 手机 都支持）。
+    2. 想让爱心里出现你的图片表情，把图片放到同目录下的 images/ 文件夹，
+       命名为 1.png、2.png、3.png …… 默认最多加载 12 张。
+       支持 png / jpg / jpeg / gif / webp，加载不到的图片会被自动隐藏。
+    3. 没有图片时，爱心里会先用一些 emoji 占位，方便你预览效果。
+
+  支持的手势：
+    · 拖动        : 按住爱心移动
+    · 双指缩放    : 触摸屏 / 触控板放大缩小
+    · 双指旋转    : 两根手指旋转
+    · 单击 / 单点 : 触发一次"爆心"特效
+    · 双击 / 双点 : 切换彩虹模式
+    · 上下滑动    : 调整爱心大小
+    · 左右滑动    : 切换背景主题
+    · 长按 (~600ms): 切换心跳动画的开 / 关
+
+  整个文件不依赖任何外部 CDN / 字体 / 库，可离线 file:// 直接打开。
+  =====================================================================
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#ff7eb9" />
+  <title>粉色爱心 · 手势互动</title>
+  <style>
+    /* ---------- 基础重置 ---------- */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+                   "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+      color: #fff;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* ---------- 背景：默认柔粉渐变 ---------- */
+    body {
+      background: radial-gradient(circle at 30% 20%, #ffe4f0 0%, #ffc0d6 45%, #ff9ec0 100%);
+      transition: background 0.8s ease;
+    }
+    body.theme-sunset  { background: radial-gradient(circle at 30% 20%, #ffd2a6 0%, #ff9aa8 50%, #ff5f8a 100%); }
+    body.theme-night   { background: radial-gradient(circle at 30% 20%, #2b2150 0%, #4b2d6b 50%, #1a0f2c 100%); }
+    body.theme-mint    { background: radial-gradient(circle at 30% 20%, #d1fff0 0%, #a8e6cf 50%, #ff9ec0 100%); }
+    body.theme-galaxy  { background: radial-gradient(circle at 30% 20%, #5b3a8a 0%, #2a1a55 50%, #0a0820 100%); }
+
+    /* ---------- 舞台 ---------- */
+    .stage {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* ---------- 爱心容器（手势作用对象） ---------- */
+    .heart {
+      position: relative;
+      width: min(70vmin, 480px);
+      height: min(70vmin, 480px);
+      touch-action: none;             /* 关闭浏览器默认手势，让我们自己处理 */
+      cursor: grab;
+      will-change: transform, filter;
+      filter: drop-shadow(0 18px 40px rgba(255, 80, 130, 0.45));
+      transition: filter 0.4s ease;
+    }
+    .heart.dragging { cursor: grabbing; }
+
+    /* 心跳脉动（默认开启） */
+    .heart.beating .heart-shape {
+      animation: heartbeat 1.4s ease-in-out infinite;
+    }
+    @keyframes heartbeat {
+      0%, 100% { transform: scale(1); }
+      14%      { transform: scale(1.07); }
+      28%      { transform: scale(1); }
+      42%      { transform: scale(1.05); }
+      70%      { transform: scale(1); }
+    }
+
+    /* 彩虹模式：色相循环 */
+    .heart.rainbow .heart-shape {
+      animation: heartbeat 1.4s ease-in-out infinite,
+                 hueShift 6s linear infinite;
+    }
+    .heart.rainbow:not(.beating) .heart-shape {
+      animation: hueShift 6s linear infinite;
+    }
+    @keyframes hueShift {
+      0%   { filter: hue-rotate(0deg)   saturate(1.1); }
+      50%  { filter: hue-rotate(180deg) saturate(1.3); }
+      100% { filter: hue-rotate(360deg) saturate(1.1); }
+    }
+
+    /* SVG 爱心本体 */
+    .heart-shape {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      transform-origin: 50% 55%;
+    }
+
+    /* ---------- 爱心内部：图片 / 表情区域 ---------- */
+    .heart-content {
+      position: absolute;
+      inset: 0;
+      /* 用同样的 SVG 路径裁剪出爱心轮廓，所以图片不会溢出 */
+      -webkit-clip-path: path('M256 472 C 96 360 24 256 24 168 C 24 96 80 48 144 48 C 192 48 232 76 256 120 C 280 76 320 48 368 48 C 432 48 488 96 488 168 C 488 256 416 360 256 472 Z');
+              clip-path: path('M256 472 C 96 360 24 256 24 168 C 24 96 80 48 144 48 C 192 48 232 76 256 120 C 280 76 320 48 368 48 C 432 48 488 96 488 168 C 488 256 416 360 256 472 Z');
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: 4%;
+      padding: 22% 14% 18% 14%;
+      pointer-events: none;            /* 不抢手势，所有交互都由 .heart 处理 */
+    }
+    .heart-content .cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(18px, 4.2vmin, 36px);
+      filter: drop-shadow(0 2px 4px rgba(180, 30, 70, 0.35));
+    }
+    .heart-content .cell img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+    }
+
+    /* 占位提示文字（仅图片全部缺失时显示） */
+    .heart-placeholder {
+      position: absolute;
+      left: 50%;
+      bottom: 18%;
+      transform: translateX(-50%);
+      font-size: clamp(11px, 2.4vmin, 14px);
+      color: rgba(255, 255, 255, 0.85);
+      text-shadow: 0 1px 2px rgba(180, 30, 70, 0.5);
+      letter-spacing: 1px;
+      pointer-events: none;
+    }
+
+    /* ---------- 爆心粒子 ---------- */
+    .particle {
+      position: fixed;
+      pointer-events: none;
+      font-size: 24px;
+      will-change: transform, opacity;
+      animation: particleFly 900ms ease-out forwards;
+    }
+    @keyframes particleFly {
+      0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
+      15%  { opacity: 1; }
+      100% { transform: translate(var(--dx), var(--dy)) scale(1.2); opacity: 0; }
+    }
+
+    /* ---------- 提示面板 ---------- */
+    .hint {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      max-width: min(92vw, 560px);
+      padding: 12px 16px 12px 18px;
+      background: rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 14px;
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(180, 30, 70, 0.5);
+      font-size: 13px;
+      line-height: 1.55;
+      box-shadow: 0 8px 24px rgba(255, 100, 140, 0.25);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      z-index: 10;
+    }
+    .hint.hidden {
+      opacity: 0;
+      transform: translateX(-50%) translateY(20px);
+      pointer-events: none;
+    }
+    .hint .row { display: flex; align-items: flex-start; gap: 10px; }
+    .hint .text { flex: 1; }
+    .hint b { color: #fff7fb; }
+    .hint .close-btn {
+      flex: 0 0 auto;
+      background: rgba(255, 255, 255, 0.28);
+      border: none;
+      color: #fff;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    .hint .close-btn:hover { background: rgba(255, 255, 255, 0.45); }
+
+    /* 浮动重新打开提示的小按钮 */
+    .hint-toggle {
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      display: none;
+      z-index: 10;
+      box-shadow: 0 4px 14px rgba(255, 100, 140, 0.25);
+    }
+    .hint-toggle.show { display: block; }
+
+    /* 状态徽标（彩虹 / 心跳关闭时显示） */
+    .status {
+      position: fixed;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .badge {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(180, 30, 70, 0.5);
+      opacity: 0;
+      transform: translateY(-6px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    .badge.show { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+  <!-- 状态徽标 -->
+  <div class="status">
+    <div id="badge-rainbow" class="badge">🌈 彩虹模式</div>
+    <div id="badge-heartbeat" class="badge">💤 心跳已暂停</div>
+  </div>
+
+  <!-- 主舞台 -->
+  <div class="stage">
+    <div id="heart" class="heart beating">
+      <!-- SVG 爱心本体：粉色渐变 + 高光 -->
+      <svg class="heart-shape" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <!-- 主色：从浅到深的暖粉色 -->
+          <radialGradient id="heartGrad" cx="40%" cy="35%" r="75%">
+            <stop offset="0%"   stop-color="#ffd6e7" />
+            <stop offset="35%"  stop-color="#ff9ec0" />
+            <stop offset="70%"  stop-color="#ff5f8a" />
+            <stop offset="100%" stop-color="#e63371" />
+          </radialGradient>
+          <!-- 边缘细描边，让爱心更立体 -->
+          <linearGradient id="heartEdge" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stop-color="#ff7eb9" stop-opacity="0.9" />
+            <stop offset="100%" stop-color="#c81d63" stop-opacity="0.9" />
+          </linearGradient>
+          <!-- 高光遮罩 -->
+          <radialGradient id="heartShine" cx="35%" cy="25%" r="30%">
+            <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.85" />
+            <stop offset="80%"  stop-color="#ffffff" stop-opacity="0" />
+          </radialGradient>
+        </defs>
+        <!-- 爱心主体 -->
+        <path d="M256 472
+                 C 96 360 24 256 24 168
+                 C 24 96 80 48 144 48
+                 C 192 48 232 76 256 120
+                 C 280 76 320 48 368 48
+                 C 432 48 488 96 488 168
+                 C 488 256 416 360 256 472 Z"
+              fill="url(#heartGrad)"
+              stroke="url(#heartEdge)"
+              stroke-width="3" />
+        <!-- 高光 -->
+        <ellipse cx="180" cy="140" rx="80" ry="52"
+                 fill="url(#heartShine)" />
+      </svg>
+
+      <!-- 爱心内部：图片 / 表情区域（占位） -->
+      <div class="heart-content" id="heart-content">
+        <!-- 12 个格子；img 加载失败会回退到 emoji 占位。 -->
+        <div class="cell" data-fallback="❤️"><img alt="" src="images/1.png"  onerror="this.replaceWith(document.createTextNode('❤️'))"></div>
+        <div class="cell" data-fallback="💕"><img alt="" src="images/2.png"  onerror="this.replaceWith(document.createTextNode('💕'))"></div>
+        <div class="cell" data-fallback="🌸"><img alt="" src="images/3.png"  onerror="this.replaceWith(document.createTextNode('🌸'))"></div>
+        <div class="cell" data-fallback="😊"><img alt="" src="images/4.png"  onerror="this.replaceWith(document.createTextNode('😊'))"></div>
+        <div class="cell" data-fallback="🥰"><img alt="" src="images/5.png"  onerror="this.replaceWith(document.createTextNode('🥰'))"></div>
+        <div class="cell" data-fallback="✨"><img alt="" src="images/6.png"  onerror="this.replaceWith(document.createTextNode('✨'))"></div>
+        <div class="cell" data-fallback="💖"><img alt="" src="images/7.png"  onerror="this.replaceWith(document.createTextNode('💖'))"></div>
+        <div class="cell" data-fallback="🌷"><img alt="" src="images/8.png"  onerror="this.replaceWith(document.createTextNode('🌷'))"></div>
+        <div class="cell" data-fallback="😘"><img alt="" src="images/9.png"  onerror="this.replaceWith(document.createTextNode('😘'))"></div>
+        <div class="cell" data-fallback="💝"><img alt="" src="images/10.png" onerror="this.replaceWith(document.createTextNode('💝'))"></div>
+        <div class="cell" data-fallback="🍓"><img alt="" src="images/11.png" onerror="this.replaceWith(document.createTextNode('🍓'))"></div>
+        <div class="cell" data-fallback="🎀"><img alt="" src="images/12.png" onerror="this.replaceWith(document.createTextNode('🎀'))"></div>
+      </div>
+      <div class="heart-placeholder">把图片放到 ./images/1.png ~ 12.png</div>
+    </div>
+  </div>
+
+  <!-- 手势提示面板 -->
+  <div class="hint" id="hint">
+    <div class="row">
+      <div class="text">
+        <b>手势小提示</b><br>
+        拖动 · 双指缩放 · 双指旋转 · 单击爆心 · 双击彩虹 · 上下滑动改变大小 · 左右滑动换背景 · 长按切换心跳
+      </div>
+      <button class="close-btn" id="hint-close" aria-label="关闭提示">✕</button>
+    </div>
+  </div>
+  <button class="hint-toggle" id="hint-toggle" aria-label="显示提示">?</button>
+
+  <script>
+  /* =====================================================================
+     手势互动逻辑
+     ---------------------------------------------------------------------
+     使用 Pointer Events 统一处理鼠标 / 触摸 / 触控笔，
+     支持单指拖动、双指缩放、双指旋转、点击 / 双击 / 长按、滑动。
+     ===================================================================== */
+  (function () {
+    'use strict';
+
+    // ---------- DOM ----------
+    const heart       = document.getElementById('heart');
+    const hint        = document.getElementById('hint');
+    const hintClose   = document.getElementById('hint-close');
+    const hintToggle  = document.getElementById('hint-toggle');
+    const badgeRain   = document.getElementById('badge-rainbow');
+    const badgeBeat   = document.getElementById('badge-heartbeat');
+
+    // ---------- 状态 ----------
+    const state = {
+      x: 0, y: 0,             // 平移
+      scale: 1,               // 缩放
+      rotate: 0,              // 旋转（角度，度）
+      minScale: 0.4,
+      maxScale: 3.5,
+    };
+
+    // 多指触控记录（pointerId -> {x, y}）
+    const pointers = new Map();
+
+    // 双指起始基线（用于增量缩放 / 旋转）
+    let pinchStart = null;
+
+    // 单指拖动起点（用来识别"滑动手势"）
+    let dragStart  = null;     // {x, y, t}
+    let lastTapAt  = 0;        // 上次单击的时间戳（用于双击识别）
+    let tapTimer   = null;     // 单击 vs 双击的延迟定时器
+    let longPressTimer = null;
+    let movedDuringPress = false;
+    const SWIPE_DIST  = 60;    // 触发滑动的最小像素
+    const SWIPE_TIME  = 500;   // 滑动必须在该时间内完成
+    const TAP_SLOP    = 8;     // 视为"点击"的最大移动半径
+    const DOUBLE_TAP_MS = 300; // 双击间隔
+    const LONG_PRESS_MS = 600;
+
+    // 背景主题循环列表
+    const themes = ['', 'theme-sunset', 'theme-night', 'theme-mint', 'theme-galaxy'];
+    let themeIndex = 0;
+
+    // ---------- 渲染 ----------
+    function applyTransform() {
+      heart.style.transform =
+        `translate(${state.x}px, ${state.y}px) ` +
+        `scale(${state.scale}) ` +
+        `rotate(${state.rotate}deg)`;
+    }
+    applyTransform();
+
+    // ---------- 工具：两指距离 / 角度 / 中点 ----------
+    function twoFingerInfo() {
+      const arr = Array.from(pointers.values());
+      if (arr.length < 2) return null;
+      const [a, b] = arr;
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      return {
+        dist: Math.hypot(dx, dy),
+        angle: Math.atan2(dy, dx) * 180 / Math.PI,
+        cx: (a.x + b.x) / 2,
+        cy: (a.y + b.y) / 2,
+      };
+    }
+
+    // ---------- Pointer 事件 ----------
+    heart.addEventListener('pointerdown', (e) => {
+      heart.setPointerCapture(e.pointerId);
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      heart.classList.add('dragging');
+
+      if (pointers.size === 1) {
+        // 单指：记录起点，启动长按计时
+        dragStart = { x: e.clientX, y: e.clientY, t: Date.now(), startX: state.x, startY: state.y };
+        movedDuringPress = false;
+        clearTimeout(longPressTimer);
+        longPressTimer = setTimeout(() => {
+          if (!movedDuringPress && pointers.size === 1) {
+            toggleHeartbeat();
+            longPressTimer = null;
+          }
+        }, LONG_PRESS_MS);
+      } else if (pointers.size === 2) {
+        // 进入双指模式：取消长按 / 拖动
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+        dragStart = null;
+        const info = twoFingerInfo();
+        pinchStart = {
+          dist: info.dist,
+          angle: info.angle,
+          scale: state.scale,
+          rotate: state.rotate,
+        };
+      }
+    });
+
+    heart.addEventListener('pointermove', (e) => {
+      if (!pointers.has(e.pointerId)) return;
+      const prev = pointers.get(e.pointerId);
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (pointers.size === 1 && dragStart) {
+        // 单指拖动：直接平移爱心
+        const dx = e.clientX - dragStart.x;
+        const dy = e.clientY - dragStart.y;
+        if (Math.hypot(dx, dy) > TAP_SLOP) movedDuringPress = true;
+        state.x = dragStart.startX + dx;
+        state.y = dragStart.startY + dy;
+        applyTransform();
+      } else if (pointers.size >= 2 && pinchStart) {
+        // 双指：缩放 + 旋转
+        const info = twoFingerInfo();
+        const ratio = info.dist / pinchStart.dist;
+        state.scale  = clamp(pinchStart.scale * ratio, state.minScale, state.maxScale);
+        state.rotate = pinchStart.rotate + (info.angle - pinchStart.angle);
+        applyTransform();
+      }
+    });
+
+    function onPointerUp(e) {
+      if (!pointers.has(e.pointerId)) return;
+      const info = pointers.get(e.pointerId);
+      pointers.delete(e.pointerId);
+
+      // 还有手指在屏幕上 → 双指 → 单指过渡：清空双指基线，且不做点击 / 滑动判断
+      if (pointers.size >= 1) {
+        pinchStart = null;
+        dragStart  = null;
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+        return;
+      }
+
+      // 全部抬起 → 收尾
+      heart.classList.remove('dragging');
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+
+      if (pinchStart) {
+        // 刚结束一次缩放 / 旋转，不再触发点击
+        pinchStart = null;
+        dragStart  = null;
+        return;
+      }
+
+      if (!dragStart) return;
+      const dx = info.x - dragStart.x;
+      const dy = info.y - dragStart.y;
+      const dt = Date.now() - dragStart.t;
+      const dist = Math.hypot(dx, dy);
+
+      // 1) 滑动手势（足够快、足够远）
+      if (dist > SWIPE_DIST && dt < SWIPE_TIME) {
+        if (Math.abs(dx) > Math.abs(dy)) {
+          // 水平滑动 → 切主题
+          cycleTheme(dx > 0 ? 1 : -1);
+          // 同时把刚才拖动产生的位移回滚到原位，避免越滑越远
+          state.x = dragStart.startX;
+          state.y = dragStart.startY;
+          applyTransform();
+        } else {
+          // 垂直滑动 → 调整大小
+          stepScale(dy < 0 ? 1.18 : 1 / 1.18);
+          state.x = dragStart.startX;
+          state.y = dragStart.startY;
+          applyTransform();
+        }
+        dragStart = null;
+        return;
+      }
+
+      // 2) 点击 / 双击（基本没动过）
+      if (dist <= TAP_SLOP) {
+        const now = Date.now();
+        if (now - lastTapAt < DOUBLE_TAP_MS) {
+          // 双击
+          clearTimeout(tapTimer);
+          tapTimer = null;
+          lastTapAt = 0;
+          toggleRainbow();
+        } else {
+          lastTapAt = now;
+          // 延迟一段时间，确认不是双击的前一下
+          tapTimer = setTimeout(() => {
+            burst(info.x, info.y);
+            tapTimer = null;
+          }, DOUBLE_TAP_MS);
+        }
+      }
+      dragStart = null;
+    }
+
+    heart.addEventListener('pointerup',     onPointerUp);
+    heart.addEventListener('pointercancel', onPointerUp);
+    heart.addEventListener('pointerleave',  (e) => {
+      // 只有完全离开且没有按下时才清，避免拖动时误清
+      if (e.buttons === 0 && pointers.has(e.pointerId)) onPointerUp(e);
+    });
+
+    // 屏蔽长按弹出的系统菜单
+    heart.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // ---------- 行为函数 ----------
+    function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
+
+    function stepScale(factor) {
+      state.scale = clamp(state.scale * factor, state.minScale, state.maxScale);
+      applyTransform();
+    }
+
+    function cycleTheme(dir) {
+      themeIndex = (themeIndex + dir + themes.length) % themes.length;
+      // 移除所有 theme-* 类
+      themes.forEach(t => { if (t) document.body.classList.remove(t); });
+      const next = themes[themeIndex];
+      if (next) document.body.classList.add(next);
+    }
+
+    function toggleRainbow() {
+      heart.classList.toggle('rainbow');
+      flashBadge(badgeRain, heart.classList.contains('rainbow'));
+    }
+
+    function toggleHeartbeat() {
+      heart.classList.toggle('beating');
+      // 心跳"暂停"时才显示徽标
+      const paused = !heart.classList.contains('beating');
+      flashBadge(badgeBeat, paused, paused ? 0 : 1200);
+    }
+
+    // 短暂显示徽标。persist=true 时常驻直到状态再切换。
+    function flashBadge(el, on, autoHideMs = 1200) {
+      if (on) {
+        el.classList.add('show');
+        if (autoHideMs > 0) {
+          clearTimeout(el._t);
+          el._t = setTimeout(() => el.classList.remove('show'), autoHideMs);
+        }
+      } else {
+        clearTimeout(el._t);
+        el.classList.remove('show');
+      }
+    }
+
+    // 爆心：在点击位置产生几颗小心心粒子，并让大爱心轻轻抖一下
+    function burst(cx, cy) {
+      // 大爱心快速放大一下再回弹
+      heart.animate(
+        [
+          { transform: heart.style.transform + ' scale(1)' },
+          { transform: heart.style.transform + ' scale(1.12)' },
+          { transform: heart.style.transform + ' scale(1)' },
+        ],
+        { duration: 320, easing: 'ease-out' }
+      );
+
+      const emojis = ['❤️', '💖', '💕', '✨', '🌸'];
+      const N = 10;
+      for (let i = 0; i < N; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.textContent = emojis[i % emojis.length];
+        const angle = (Math.PI * 2 * i) / N + Math.random() * 0.3;
+        const dist  = 80 + Math.random() * 60;
+        p.style.left = cx + 'px';
+        p.style.top  = cy + 'px';
+        p.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+        p.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+        p.style.fontSize = (18 + Math.random() * 14) + 'px';
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 1000);
+      }
+    }
+
+    // ---------- 提示面板 ----------
+    hintClose.addEventListener('click', () => {
+      hint.classList.add('hidden');
+      hintToggle.classList.add('show');
+    });
+    hintToggle.addEventListener('click', () => {
+      hint.classList.remove('hidden');
+      hintToggle.classList.remove('show');
+    });
+
+    // 6 秒后自动收起提示，避免一直挡着画面
+    setTimeout(() => {
+      if (!hint.classList.contains('hidden')) {
+        hint.classList.add('hidden');
+        hintToggle.classList.add('show');
+      }
+    }, 6000);
+
+    // ---------- 防止整页滚动 / 双指缩放整页 ----------
+    document.addEventListener('gesturestart',  (e) => e.preventDefault());
+    document.addEventListener('touchmove',     (e) => {
+      // 只有当事件目标在 .heart 内部，或本身就是页面级双指时才阻止
+      if (e.touches && e.touches.length > 1) e.preventDefault();
+    }, { passive: false });
+
+    // ---------- 键盘小彩蛋（电脑用户也能玩） ----------
+    window.addEventListener('keydown', (e) => {
+      switch (e.key) {
+        case 'ArrowUp':    stepScale(1.1); break;
+        case 'ArrowDown':  stepScale(1 / 1.1); break;
+        case 'ArrowLeft':  cycleTheme(-1); break;
+        case 'ArrowRight': cycleTheme(1);  break;
+        case 'r': case 'R': toggleRainbow(); break;
+        case 'b': case 'B': toggleHeartbeat(); break;
+        case ' ': {
+          const r = heart.getBoundingClientRect();
+          burst(r.left + r.width / 2, r.top + r.height / 2);
+          e.preventDefault();
+          break;
+        }
+      }
+    });
+  })();
+  </script>
+</body>
+</html>
